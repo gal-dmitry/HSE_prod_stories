@@ -1,13 +1,16 @@
 import sqlite3
 import datetime
 import itertools
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
 from copy import deepcopy
 from sklearn.preprocessing import normalize
+
+from nltk.cluster import KMeansClusterer
+from sklearn.metrics import mean_absolute_error
+from scipy.spatial.distance import cosine as cosine_distance
+from dtaidistance.dtw import distance as dtw_distance
 
 
 """
@@ -144,19 +147,37 @@ def binarized_sessions_by_date(df, dates, normalize=False, show_deals=False, fig
         title = f"date: {date}"
         _df = df[df.date == date]
         _all_binarized_sessions(_df, normalize=normalize, show_deals=show_deals, figsize=figsize, legend=legend, title=title)
+     
         
-        
-def one_pic_all_binarized_session(df, normalize=False, show_deals=False, figsize=12, legend=False):
+def one_pic_all_binarized_sessions(df, normalize=False, show_deals=False, figsize=12, legend=False, title=None):
     
-    title=f"All {'normalized '*normalize}sessions"
+    if title is None:
+        title=f"All {'normalized '*normalize}sessions"
     xs, ys = [], []
     values = df.avg_min_price if not normalize else df.norm_avg_min_price
     for y in values:
         xs.append(list(range(y.shape[0])))
         ys.append(y)
     show_session(xs, ys, show_deals=show_deals, figsize=figsize, legend=legend, title=title)
-    
         
+    
+def clustered_sessions(df, metric='dtw', normalize=False, show_deals=False, figsize=12, legend=False):
+    
+    clusters = np.sort(df[f"{metric}_cluster"].unique())
+    clusters = clusters[~np.isnan(clusters)]
+    
+    for i in clusters:
+        _df = df[df[f"{metric}_cluster"] == i]    
+        title=f"[Metric: {metric}] [Cluster: {int(i)}]"
+        
+        xs, ys = [], []
+        values = _df.avg_min_price if not normalize else _df.norm_avg_min_price
+        for y in values:
+            xs.append(list(range(y.shape[0])))
+            ys.append(y)
+        show_session(xs, ys, show_deals=show_deals, figsize=figsize, legend=legend, title=title)    
+
+    
 """
 Dataframe utils
 """
@@ -333,7 +354,7 @@ def stat_print(typical_deal, untypical_deal, only_untypical=True):
     if not only_untypical:
         print('Typical_sessions:')
         print()
-        print(f"      date |                    | cnt | total size")
+        print(f"      date | first_dl last_dl | cnt | total size")
         for row in typical_deal:
             print(f"{row.date} | {row.first_deal}  {row.last_deal} | {f'{row.deal_count:3}'} | {f'{row.total_size:4}'}")
         print()
@@ -341,7 +362,7 @@ def stat_print(typical_deal, untypical_deal, only_untypical=True):
         
     print('Untypical_sessions:')
     print()
-    print(f"      date |                    | cnt | total size")
+    print(f"      date | first_dl last_dl | cnt | total size")
     for row in untypical_deal:
         print(f"{row.date} | {row.first_deal}  {row.last_deal} | {f'{row.deal_count:3}'} | {f'{row.total_size:4}'}")    
     print()
@@ -359,3 +380,42 @@ def separate_sessions(df):
         else:
             untypical_deal.append(row)
     stat_print(typical_deal, untypical_deal)
+    
+    
+"""
+KMeans
+"""
+def check_distances(vec1=[1, 1, 1], vec2=[2, 3, 4]):
+    
+    # Проверим, что мы используем именно расстояния, а не сходство  
+    print(f"vec1: {vec1}, vec2: {vec2}")
+    print()
+    print(f"mae vec1-vec1: {cosine_distance(vec1, vec1)}")
+    print(f"mae vec1-vec2: {cosine_distance(vec1, vec2)}")
+    print()
+    print(f"mae vec1-vec1: {mean_absolute_error(vec1, vec1)}")
+    print(f"mae vec1-vec2: {mean_absolute_error(vec1, vec2)}")
+    print()
+    print(f"dtw vec1-vec1: {dtw_distance(vec1, vec1)}")
+    print(f"dtw vec1-vec2: {dtw_distance(vec1, vec2)}")
+
+
+def clusterize(df, num_means=5):
+    
+    distances = {'cos': cosine_distance, 
+                 'mae': mean_absolute_error, 
+                 'dtw': dtw_distance}
+
+    clusterers = [(name, KMeansClusterer(num_means, dist)) for name, dist in distances.items()]
+    
+    corr_idx = np.where(df.session_type != 'untypical')[0]
+    vectors = df[df.session_type == 'typical'].norm_avg_min_price.tolist()
+    
+    for pair in clusterers:   
+        name, clusterer = pair
+        clusters = clusterer.cluster(vectors, True, trace=True)
+                                        
+        df[f"{name}_cluster"] = np.nan
+        df.loc[corr_idx, f"{name}_cluster"] = clusters
+        
+    return df
