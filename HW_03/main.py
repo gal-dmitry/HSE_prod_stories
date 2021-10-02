@@ -1,4 +1,5 @@
 import pandas as pd
+from math import sqrt
 
 
 def read_in(name='in'):
@@ -22,8 +23,11 @@ def get_R1_R2(dt, p):
     return R1, R2
 
 
-def check_norm(diff):
+def check_norm(diff, N, p):
     'change'
+    
+    std_err = (N + 0.5) * sqrt(p/6) 
+    
     return 1
 
 
@@ -54,8 +58,17 @@ def get_all_stat(dt):
 
 def main():
     
-    dt = read_in()
-    all_stat = get_all_stat(dt)
+    try:
+        dt = read_in()
+    except:
+        print("Неправильный формат входных данных")
+        return
+    try:    
+        all_stat = get_all_stat(dt)
+    except:
+        print("Для этого метода N должно быть равно по меньшей мере 9")
+        return
+    
     new_dt = pd.DataFrame(data=all_stat)
     write_out(new_dt)
     
