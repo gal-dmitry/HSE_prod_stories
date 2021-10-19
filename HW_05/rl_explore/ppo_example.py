@@ -7,6 +7,7 @@ import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
 from PIL import Image
+from torch.utils.tensorboard import SummaryWriter
 
 
 sys.path.append(os.path.abspath("mapgen"))
@@ -92,27 +93,55 @@ def create_config():
     return config
     
 
-def train(agent, N_ITER, CHECKPOINT_ROOT):
+def update_writer(writer, result, n):
     
-    s = "{:3d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:6.2f} saved {}"
-
-    #env = Dungeon(50, 50, 3)
-    for n in range(N_ITER):
-        result = agent.train()
-        #print(result.keys())
-        file_name = agent.save(CHECKPOINT_ROOT)
-
-        print(s.format(
+    s = "{:3d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:6.2f}"
+    print(s.format(
             n + 1,
             result["episode_reward_min"],
             result["episode_reward_mean"],
             result["episode_reward_max"],
-            result["episode_len_mean"],
-            file_name
+            result["episode_len_mean"]
         ))
+    
+#         print(result.keys())
+#         for key, value in result.items():
+#             print()
+#             print()
+#             print(key)
+#             print()
+#             print(value)
+    
+    n +=1        
+                                    
+    writer.add_scalar("episode_reward_min", result["episode_reward_min"], n)
+    writer.add_scalar("episode_reward_mean", result["episode_reward_mean"], n)
+    writer.add_scalar("episode_reward_max", result["episode_reward_max"], n)
+    writer.add_scalar("episode_len_mean", result["episode_len_mean"], n)    
+    writer.add_scalar("episodes_this_iter", result["episodes_this_iter"], n)
+    writer.add_scalar("episodes_total", result["episodes_total"], n)
+    writer.add_scalar("training_iteration", result["training_iteration"], n)
+    
+    dct = result['info']['learner']['default_policy']['learner_stats']
+    for key, value in dct.items():
+        writer.add_scalar(key, value, n)
 
-        # sample trajectory
+    return writer
+
+    
+def train(agent, writer, N_ITER, CHECKPOINT_ROOT):
+
+    #env = Dungeon(50, 50, 3)
+    for n in range(N_ITER):
+        result = agent.train()        
+        writer = update_writer(writer, result, n)
+
+        # save and sample trajectory
         if (n+1)%5 == 0:
+            
+            file_name = agent.save(CHECKPOINT_ROOT)
+            print(f"saved at {file_name}")
+            
             env = Dungeon(20, 20, 3, min_room_xy=5, max_room_xy=10, vision_radius=5)
             obs = env.reset()
             Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).save('tmp.png')
@@ -135,13 +164,15 @@ def train(agent, N_ITER, CHECKPOINT_ROOT):
             
     
 if __name__ == "__main__":
+    
     CHECKPOINT_ROOT = "tmp/ppo/dungeon"
     N_ITER = 500
+    writer = SummaryWriter()
     
     ray_launch(CHECKPOINT_ROOT)
     config = create_config()
     agent = ppo.PPOTrainer(config)
-    train(agent, N_ITER, CHECKPOINT_ROOT)
+    train(agent, writer, N_ITER, CHECKPOINT_ROOT)
     
     
     
