@@ -45,19 +45,21 @@ class ModifiedDungeon(Dungeon):
         return observation, reward , done, info
     
 
-def ray_launch(CHECKPOINT_ROOT):
+if __name__ == "__main__":
+
     ray.shutdown()
     ray.init(ignore_reinit_error=True)
     tune.register_env("Dungeon", lambda config: Dungeon(**config))
 
+
+    CHECKPOINT_ROOT = "tmp/ppo/dungeon"
     shutil.rmtree(CHECKPOINT_ROOT, ignore_errors=True, onerror=None)
 
     ray_results = os.getenv("HOME") + "/ray_results1/"
     shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
-    
-    
-def create_config():
+
     config = ppo.DEFAULT_CONFIG.copy()
+#     config["num_gpus"] = 1
     config["num_gpus"] = 0
     config["log_level"] = "INFO"
     config["framework"] = "torch"
@@ -88,15 +90,17 @@ def create_config():
     config["entropy_coeff"] = 0.1
     config["lambda"] = 0.95
     config["vf_loss_coeff"] = 1.0
-    
-    return config
-    
 
-def train(agent, N_ITER, CHECKPOINT_ROOT):
-    
+
+
+    agent = ppo.PPOTrainer(config)
+
+
+    N_ITER = 500
     s = "{:3d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:6.2f} saved {}"
 
     #env = Dungeon(50, 50, 3)
+
     for n in range(N_ITER):
         result = agent.train()
         #print(result.keys())
@@ -131,17 +135,3 @@ def train(agent, N_ITER, CHECKPOINT_ROOT):
                     break
 
             frames[0].save(f"out.gif", save_all=True, append_images=frames[1:], loop=0, duration=1000/60)
-                     
-            
-    
-if __name__ == "__main__":
-    CHECKPOINT_ROOT = "tmp/ppo/dungeon"
-    N_ITER = 500
-    
-    ray_launch(CHECKPOINT_ROOT)
-    config = create_config()
-    agent = ppo.PPOTrainer(config)
-    train(agent, N_ITER, CHECKPOINT_ROOT)
-    
-    
-    
