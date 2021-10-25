@@ -9,47 +9,15 @@ from ray import tune
 from PIL import Image
 from torch.utils.tensorboard import SummaryWriter
 
-
 sys.path.append(os.path.abspath("mapgen"))
 os.environ["PYTHONPATH"] = os.path.abspath("mapgen")
-from mapgen import Dungeon
+from mapgen import Dungeon, ModifiedDungeon
 
 
-class ModifiedDungeon(Dungeon):
-    """Use this class to change the behavior of the original env (e.g. remove the trajectory from observation, like here)"""
-    def __init__(self,
-        width=20,
-        height=20,
-        max_rooms=3,
-        min_room_xy=5,
-        max_room_xy=12,
-        max_steps: int = 2000
-    ):
-        observation_size = 11
-        super().__init__(
-            width=width,
-            height=height,
-            max_rooms=max_rooms,
-            min_room_xy=min_room_xy,
-            max_room_xy=max_room_xy,
-            observation_size = 11,
-            vision_radius = 5,
-            max_steps = max_steps
-        )
-
-        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 3]) # because we remove trajectory and leave only cell types (UNK, FREE, OCCUPIED)
-        self.action_space = spaces.Discrete(3)
-
-    def step(self):
-        observation, reward , done, info = super().step()
-        observation = observation[:, :, :-1] # remove trajectory
-        return observation, reward , done, info
-    
-
-def ray_launch(CHECKPOINT_ROOT):
+def ray_launch(CHECKPOINT_ROOT, ENVIRONMENT):
     ray.shutdown()
     ray.init(ignore_reinit_error=True)
-    tune.register_env("Dungeon", lambda config: Dungeon(**config))
+    tune.register_env(f"{ENVIRONMENT}", lambda config: ENVIRONMENT(**config))
 
     shutil.rmtree(CHECKPOINT_ROOT, ignore_errors=True, onerror=None)
 
@@ -57,12 +25,12 @@ def ray_launch(CHECKPOINT_ROOT):
     shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
     
     
-def create_config():
+def create_config(ENVIRONMENT):
     config = ppo.DEFAULT_CONFIG.copy()
     config["num_gpus"] = 0
     config["log_level"] = "INFO"
     config["framework"] = "torch"
-    config["env"] = "Dungeon"
+    config["env"] = f"{ENVIRONMENT}"
     config["env_config"] = {
         "width": 20,
         "height": 20,
@@ -129,7 +97,7 @@ def update_writer(writer, result, n):
     return writer
 
     
-def train(agent, writer, N_ITER, CHECKPOINT_ROOT):
+def train(agent, writer, N_ITER, CHECKPOINT_ROOT, ENVIRONMENT):
 
     #env = Dungeon(50, 50, 3)
     for n in range(N_ITER):
@@ -137,12 +105,12 @@ def train(agent, writer, N_ITER, CHECKPOINT_ROOT):
         writer = update_writer(writer, result, n)
 
         # save and sample trajectory
-        if (n+1)%5 == 0:
+        if (n + 1) % 5 == 0:
             
             file_name = agent.save(CHECKPOINT_ROOT)
             print(f"saved at {file_name}")
             
-            env = Dungeon(20, 20, 3, min_room_xy=5, max_room_xy=10, vision_radius=5)
+            env = ENVIRONMENT(20, 20, 3, min_room_xy=5, max_room_xy=10, vision_radius=5)
             obs = env.reset()
             Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).save('tmp.png')
 
@@ -166,13 +134,14 @@ def train(agent, writer, N_ITER, CHECKPOINT_ROOT):
 if __name__ == "__main__":
     
     CHECKPOINT_ROOT = "tmp/ppo/dungeon"
+    ENVIRONMENT = Dungeon
     N_ITER = 500
     writer = SummaryWriter()
     
-    ray_launch(CHECKPOINT_ROOT)
-    config = create_config()
+    ray_launch(CHECKPOINT_ROOT, ENVIRONMENT)
+    config = create_config(ENVIROMNENT)
     agent = ppo.PPOTrainer(config)
-    train(agent, writer, N_ITER, CHECKPOINT_ROOT)
+    train(agent, writer, N_ITER, CHECKPOINT_ROOT, ENVIRONMENT)
     
     
     
