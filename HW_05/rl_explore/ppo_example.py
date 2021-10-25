@@ -3,6 +3,10 @@ import sys
 import shutil
 from gym import spaces
 
+import csv
+import datetime
+from os.path import join
+
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
@@ -12,25 +16,17 @@ from torch.utils.tensorboard import SummaryWriter
 sys.path.append(os.path.abspath("mapgen"))
 os.environ["PYTHONPATH"] = os.path.abspath("mapgen")
 from mapgen import Dungeon, ModifiedDungeon
+from utils import update_writer_training, update_writer_trajectory, seed_everything
 
 
-def ray_launch(CHECKPOINT_ROOT, ENVIRONMENT):
-    ray.shutdown()
-    ray.init(ignore_reinit_error=True)
-    tune.register_env(f"{ENVIRONMENT}", lambda config: ENVIRONMENT(**config))
 
-    shutil.rmtree(CHECKPOINT_ROOT, ignore_errors=True, onerror=None)
-
-    ray_results = os.getenv("HOME") + "/ray_results1/"
-    shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
-    
-    
-def create_config(ENVIRONMENT):
+def create_config(ENVIRONMENT, SEED):
     config = ppo.DEFAULT_CONFIG.copy()
     config["num_gpus"] = 0
     config["log_level"] = "INFO"
     config["framework"] = "torch"
     config["env"] = f"{ENVIRONMENT}"
+    config["seed"] = SEED
     config["env_config"] = {
         "width": 20,
         "height": 20,
@@ -60,88 +56,73 @@ def create_config(ENVIRONMENT):
     
     return config
     
+    
 
-def update_writer(writer, result, n):
+def ray_launch(ENVIRONMENT, CHECKPOINT_DIR, RAY_RESULTS_DIR, GIF_DIR):    
     
-    s = "{:3d} reward {:6.2f}/{:6.2f}/{:6.2f} len {:6.2f}"
-    print(s.format(
-            n + 1,
-            result["episode_reward_min"],
-            result["episode_reward_mean"],
-            result["episode_reward_max"],
-            result["episode_len_mean"]
-        ))
+    ray.shutdown()
+    ray.init(ignore_reinit_error=True)
+    tune.register_env(f"{ENVIRONMENT}", lambda config: ENVIRONMENT(**config))
     
-#         print(result.keys())
-#         for key, value in result.items():
-#             print()
-#             print()
-#             print(key)
-#             print()
-#             print(value)
-    
-    n +=1        
-                                    
-    writer.add_scalar("episode_reward_min", result["episode_reward_min"], n)
-    writer.add_scalar("episode_reward_mean", result["episode_reward_mean"], n)
-    writer.add_scalar("episode_reward_max", result["episode_reward_max"], n)
-    writer.add_scalar("episode_len_mean", result["episode_len_mean"], n)    
-    writer.add_scalar("episodes_this_iter", result["episodes_this_iter"], n)
-    writer.add_scalar("episodes_total", result["episodes_total"], n)
-    writer.add_scalar("training_iteration", result["training_iteration"], n)
-    
-    dct = result['info']['learner']['default_policy']['learner_stats']
-    for key, value in dct.items():
-        writer.add_scalar(key, value, n)
-
-    return writer
+    for directory in [CHECKPOINT_DIR, RAY_RESULTS_DIR, GIF_DIR]:
+        shutil.rmtree(directory, ignore_errors=True, onerror=None)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
     
-def train(agent, writer, N_ITER, CHECKPOINT_ROOT, ENVIRONMENT):
+    
+def train(agent, writer_training, timestamp, N_ITER, ENVIRONMENT, CHECKPOINT_DIR, GIF_DIR):
 
-    #env = Dungeon(50, 50, 3)
     for n in range(N_ITER):
-        result = agent.train()        
-        writer = update_writer(writer, result, n)
-
+        result = agent.train()
+        writer_training = update_writer_training(writer_training, result, n)
+    
         # save and sample trajectory
         if (n + 1) % 5 == 0:
             
-            file_name = agent.save(CHECKPOINT_ROOT)
+            file_name = agent.save(CHECKPOINT_DIR)
             print(f"saved at {file_name}")
             
             env = ENVIRONMENT(20, 20, 3, min_room_xy=5, max_room_xy=10, vision_radius=5)
+            seed_everything(SEED, env=env)
             obs = env.reset()
-            Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).save('tmp.png')
-
+            
             frames = []
-
+            writer_trajectory = SummaryWriter(log_dir=f"tf_trajectory/{timestamp}/{str.zfill(str(n+1), 3)}")
+            
             for _ in range(500):
                 action = agent.compute_single_action(obs)
 
                 frame = Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).quantize()
                 frames.append(frame)
 
-                #frame.save('tmp1.png')
                 obs, reward, done, info = env.step(action)
+                writer_trajectory = update_writer_trajectory(writer_trajectory, info, reward, _)                        
                 if done:
                     break
 
-            frames[0].save(f"out.gif", save_all=True, append_images=frames[1:], loop=0, duration=1000/60)
+            out_path = join(GIF_DIR, f"{str.zfill(str(n+1), 3)}.gif")
+            frames[0].save(out_path, save_all=True, append_images=frames[1:], loop=0, duration=1000/60)
                      
             
     
 if __name__ == "__main__":
     
-    CHECKPOINT_ROOT = "tmp/ppo/dungeon"
-    ENVIRONMENT = Dungeon
+    SEED = 666
     N_ITER = 500
-    writer = SummaryWriter()
+    ENVIRONMENT = Dungeon
     
-    ray_launch(CHECKPOINT_ROOT, ENVIRONMENT)
-    config = create_config(ENVIROMNENT)
+    CHECKPOINT_DIR = "tmp/ppo/dungeon"
+    RAY_RESULTS_DIR = "./save/ray_results"
+    GIF_DIR = "./save/gifs"
+
+    timestamp = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M')
+    writer_training = SummaryWriter(log_dir=f"tf_training/{timestamp}")
+    
+    ray_launch(ENVIRONMENT, CHECKPOINT_DIR, RAY_RESULTS_DIR, GIF_DIR)
+    config = create_config(ENVIRONMENT, SEED)
     agent = ppo.PPOTrainer(config)
-    train(agent, writer, N_ITER, CHECKPOINT_ROOT, ENVIRONMENT)
+    train(agent, writer_training, timestamp, N_ITER, ENVIRONMENT, CHECKPOINT_DIR, GIF_DIR)
     
     
     
