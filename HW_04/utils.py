@@ -48,7 +48,7 @@ def get_dct(model_names, hist_path, count=None):
 
 
 
-def form_dataset(dct, labels, _type='all', _intervals=8):
+def form_dataset(dct, labels, _type='all', _intervals=8, standardize=False):
 
     keys, vectors = [], []
     for key, df in dct.items():      
@@ -58,14 +58,30 @@ def form_dataset(dct, labels, _type='all', _intervals=8):
             lst = df[_intervals].tolist()
             for hist in lst:
                 vector.extend(hist)
-        
-        elif _type == 'analytic':
+        else:           
             lst = df[_intervals].tolist()
-            for hist in lst[:4]:
-                hist = np.array(hist)
-                vector.append(hist)
-            vector = np.array(vector)
             
+            if _type == 'analytic_model':
+                lst = lst[:4]  
+            elif _type == 'analytic_hull':    
+                lst = lst[4:]
+            elif _type == 'analytic':
+                lst = lst
+                
+            elif _type == 'analytic_3':
+                lst = [lst[0], lst[2], lst[3]]    
+            
+            elif _type == 'analytic_2':
+                lst = [lst[0], lst[3]]
+                
+            for hist in lst:
+                hist = np.array(hist)
+                if standardize:
+                    hist = (hist - hist.mean()) / hist.std()
+                vector.append(hist)
+                
+            vector = np.array(vector)
+                        
         vectors.append(vector)
         keys.append(key)
         
@@ -134,6 +150,24 @@ def analytic_distance(x, y):
     return np.sum(distances * coefs)
 
 
+class AnalyticDistance:
+    
+    def __init__(self, coefs):
+        self.coefs = coefs
+        
+    def __call__(self, x, y): 
+        
+        distances = []
+
+        for h_x, h_y in zip(x, y):
+            D = get_distance(h_x, h_y)
+            distances.append(D)      
+
+        distances = np.array(distances)
+
+        return np.sum(distances * self.coefs)
+
+
 def get_pred_labels_analytic(df, dist):
     
     X = df.vectors.to_list()
@@ -150,6 +184,27 @@ def get_pred_labels_analytic(df, dist):
     get_cluster_stat(df)
     
     return df 
+
+
+
+# def get_pred_labels_analytic_DBSCAN(df, dist):
+    
+#     X = df.vectors.to_list()
+#     n_clusters = df.type.unique().shape[0]
+
+#     clusterer = DBSCAN(metric=dist).fit(X)
+    
+#     labels_pred = clusterer.labels_
+#     labels_true = df.type.to_list()
+#     rand_index = rand_score(labels_true, labels_pred)
+#     print(f"rand_index: {rand_index}" + "\n")
+    
+#     df["cluster"] = labels_pred
+#     get_cluster_stat(df)
+    
+#     return df 
+
+
 
 
 
