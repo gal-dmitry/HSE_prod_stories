@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+from nltk.cluster import KMeansClusterer
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import rand_score
 
-# import umap
+import umap
 from sklearn.cluster import DBSCAN
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
@@ -47,37 +48,6 @@ def get_dct(model_names, hist_path, count=None):
 
 
 
-# def form_dataset(dct, labels, _type='all', _intervals=8):
-    
-#     vector_df = pd.DataFrame(data={"vector": [[np.nan]*8*_intervals] * len(labels)})
-#     new_df = pd.concat([labels.copy(), vector_df], axis=1)
-
-# #     new_df = pd.concat([labels.copy(), vector_df], axis=1)  
-# #     return new_df    
-        
-        
-#     for key, df in dct.items():
-        
-#         vector = []
-        
-#         if _type == 'all':
-#             lst = df[_intervals].tolist()
-#             for hist in lst:
-#                 vector.extend(hist)
-        
-# #         print(new_df)
-# #         print(key)
-# #         print(vector)
-# #         new_df.model == key
-#         print(new_df.loc[new_df.model == key, "vector"])
-#         new_df.loc[new_df.model == key, "vector"] = vector
-# #         print(new_df.loc[new_df.model == key, "vector"])
-# #         new_df.loc[new_df.model == key]["vector"] = vector
-    
-#     return new_df
-
-
-
 def form_dataset(dct, labels, _type='all', _intervals=8):
 
     keys, vectors = [], []
@@ -89,6 +59,13 @@ def form_dataset(dct, labels, _type='all', _intervals=8):
             for hist in lst:
                 vector.extend(hist)
         
+        elif _type == 'analytic':
+            lst = df[_intervals].tolist()
+            for hist in lst[:4]:
+                hist = np.array(hist)
+                vector.append(hist)
+            vector = np.array(vector)
+            
         vectors.append(vector)
         keys.append(key)
         
@@ -109,24 +86,12 @@ def get_cluster_stat(df):
 #         print()
         
         bar_chart(types, counts)
-            
 
-def reduce_fingerprints(fingerprints, mode='TSNE'):
-    '''
-    takes fingerprints (and optionally rationale_fingerprints) and reduce it for 2D scatter plot
-    '''   
-    if mode == 'UMAP':
-        reducer = umap.UMAP()
-    elif mode == 'TSNE':
-        reducer = TSNE(n_components=2)
-    elif mode == 'PCA':
-        reducer = PCA(n_components=2)        
-    else:
-        raise ValueError("Unknown reducer")
-        
-    return reducer.fit_transform(fingerprints)
+
     
-    
+"""
+Kmeans sklearn
+"""
 def get_pred_labels(df):
     
     X = df.vectors.to_list()
@@ -140,18 +105,78 @@ def get_pred_labels(df):
     print(f"rand_index: {rand_index}" + "\n")
     
     df["cluster"] = labels_pred
-    df["reduced_vectors"] = reduce_fingerprints(df.vectors.to_list()).tolist()
     get_cluster_stat(df)
     
     return df 
     
+
     
-def show_clusters(df):
+"""
+Kmeans NLTK
+"""
+def get_distance(h_x, h_y):    
+    D = 0.5 * np.sum(np.abs(h_x - h_y)) / (np.sum(h_x) + np.sum(h_y)) + \
+        0.5 * np.sqrt(np.sum((h_x - h_y)**2) / (np.sum(h_x)**2 + np.sum(h_y)**2))  
+    return D
+
+
+def analytic_distance(x, y):
+    
+    coefs = np.array([0.25, 0.25, 0.25, 0.25])
+    distances = []
+    
+    for h_x, h_y in zip(x, y):
+        D = get_distance(h_x, h_y)
+        distances.append(D)      
+        
+    distances = np.array(distances)
+    
+    return np.sum(distances * coefs)
+
+
+def get_pred_labels_analytic(df, dist):
+    
+    X = df.vectors.to_list()
+    n_clusters = df.type.unique().shape[0]
+
+    clusterer = KMeansClusterer(n_clusters, dist)
+    
+    labels_pred = clusterer.cluster(X, True, trace=True)
+    labels_true = df.type.to_list()
+    rand_index = rand_score(labels_true, labels_pred)
+    print(f"rand_index: {rand_index}" + "\n")
+    
+    df["cluster"] = labels_pred
+    get_cluster_stat(df)
+    
+    return df 
+
+
+
+"""
+Visualize
+"""
+def reduce_fingerprints(fs, mode='TSNE'):
+    if mode == 'UMAP':
+        reducer = umap.UMAP()
+    elif mode == 'TSNE':
+        reducer = TSNE(n_components=2)
+    elif mode == 'PCA':
+        reducer = PCA(n_components=2)        
+    else:
+        raise ValueError("Unknown reducer")
+        
+    return reducer.fit_transform(fs)    
+    
+    
+def show_clusters(df, mode="TSNE"):
+    
+    df["reduced_vectors"] = reduce_fingerprints(df.vectors.to_list(), mode=mode).tolist()
     
     assert len(df.cluster.unique()) == 5
     
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
-    fig, ax = plt.subplots(figsize=(12, 12))
+    fig, ax = plt.subplots(figsize=(10, 10))
     
     for cluster in sorted(df.cluster.unique()):
         points = df[df.cluster == cluster].reduced_vectors
@@ -166,9 +191,12 @@ def show_clusters(df):
         ax.scatter(xs, ys, c=color, label=f"cluster: {cluster}", alpha=0.3, edgecolors='none')
             
     ax.set_aspect('equal')
-    ax.legend()
     ax.grid(True)
+    ax.legend()
     plt.show()
+
+    
+    
 
 
 
