@@ -12,6 +12,8 @@
 - [Histograms](./histograms)
 - [Models](https://drive.google.com/drive/folders/1XrWkQBYC0Zh1WSNv05nffQZumf0Ol1ip?usp=sharing)
 
+Используемый датасет является частью [датасета](https://drive.google.com/drive/folders/1CjqyVZ6PqPoYqHlTBYgTzQZAodvDYBm5), который был сформирован на группу через API пользователем [Denis Sushentsev](https://github.com/Sushentsev)
+
 
 #### Environment
 

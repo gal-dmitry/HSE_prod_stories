@@ -1,0 +1,3 @@
+https://pypi.org/project/bpy/
+https://github.com/TylerGubala/blenderpy/releases/tag/v2.91a0
+https://wiki.blender.org/wiki/Building_Blender/Linux/Ubuntu
