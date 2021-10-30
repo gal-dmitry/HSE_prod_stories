@@ -8,7 +8,7 @@
 
 #### Files:
 
-- [Notebook](./Clusterize.ipynb)
+- [Clusterize](./Clusterize.ipynb)
 - [Histograms](./histograms)
 - [Models](https://drive.google.com/drive/folders/1XrWkQBYC0Zh1WSNv05nffQZumf0Ol1ip?usp=sharing)
 
