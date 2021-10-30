@@ -1,23 +1,33 @@
 import pandas as pd
 import numpy as np
 import json
+import random
+import itertools
 import matplotlib.pyplot as plt
 from nltk.cluster import KMeansClusterer
-from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import rand_score
 
 import umap
-from sklearn.cluster import DBSCAN
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from sklearn.cluster import DBSCAN
 
 
+SEED = 42
 
-def bar_chart(types, counts):
-    plt.bar(types, counts)
-    plt.show()
-    
-    
+
+"""
+Itertools
+"""
+def C(n, k):
+    lst_tpl = list(itertools.combinations(range(1, n), k))
+    lst_lst = np.array([list(tpl) for tpl in lst_tpl]) - 1
+    return lst_lst
+
+
+"""
+Datasets
+"""   
 def get_dct(model_names, hist_path, count=None):
     
     dct = {}
@@ -48,40 +58,32 @@ def get_dct(model_names, hist_path, count=None):
 
 
 
-def form_dataset(dct, labels, _type='all', _intervals=8, standardize=False):
+def form_dataset(dct, labels, _type='concatenate_all', idx=None, _intervals=8, standardize=False):
 
     keys, vectors = [], []
     for key, df in dct.items():      
+        
+        lst = df[_intervals].tolist()
         vector = []
         
-        if _type == 'all':
-            lst = df[_intervals].tolist()
+        if _type == 'concatenate_all':
             for hist in lst:
                 vector.extend(hist)
-        else:           
-            lst = df[_intervals].tolist()
-            
-            if _type == 'analytic_model':
-                lst = lst[:4]  
-            elif _type == 'analytic_hull':    
-                lst = lst[4:]
-            elif _type == 'analytic':
-                lst = lst
                 
-            elif _type == 'analytic_3':
-                lst = [lst[0], lst[2], lst[3]]    
-            
-            elif _type == 'analytic_2':
-                lst = [lst[0], lst[3]]
+        elif _type == 'analytic':                
+            new_lst = lst if idx is None else [lst[i] for i in idx]
                 
-            for hist in lst:
-                hist = np.array(hist)
+            for hist in new_lst:                
                 if standardize:
+                    hist = np.array(hist)
                     hist = (hist - hist.mean()) / hist.std()
                 vector.append(hist)
                 
-            vector = np.array(vector)
-                        
+        else:
+            raise TypeError()
+        
+        vector = np.array(vector) 
+        
         vectors.append(vector)
         keys.append(key)
         
@@ -90,45 +92,30 @@ def form_dataset(dct, labels, _type='all', _intervals=8, standardize=False):
     return pd.concat([labels.copy(), sec_df.drop(columns=["name"])], axis=1)
 
 
-def get_cluster_stat(df):
+
+"""
+Statistics
+"""
+def bar_chart(types, counts):
+    plt.bar(types, counts)
+    plt.show()
     
+    
+def get_cluster_stat(df, mode='bar'):
     for num in range(df.cluster.unique().shape[0]):
-    
         types, counts = np.unique(df[df.cluster == num].type, return_counts=True)
-        
         print(f"--- cluster: {num} ---")
-#         for _type, count in zip(types, counts):
-#             print(f"{_type}: {count}")
-#         print()
+        if mode == 'bar':
+            bar_chart(types, counts)
+        else:
+            for _type, count in zip(types, counts):
+                print(f"{_type}: {count}")
+            print()
         
-        bar_chart(types, counts)
+        
 
-
-    
 """
-Kmeans sklearn
-"""
-def get_pred_labels(df):
-    
-    X = df.vectors.to_list()
-    n_clusters = df.type.unique().shape[0]
-    
-    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(X)
-    
-    labels_pred = kmeans.labels_
-    labels_true = df.type.to_list()
-    rand_index = rand_score(labels_true, labels_pred)
-    print(f"rand_index: {rand_index}" + "\n")
-    
-    df["cluster"] = labels_pred
-    get_cluster_stat(df)
-    
-    return df 
-    
-
-    
-"""
-Kmeans NLTK
+Analytic distance
 """
 def get_distance(h_x, h_y):    
     D = 0.5 * np.sum(np.abs(h_x - h_y)) / (np.sum(h_x) + np.sum(h_y)) + \
@@ -136,78 +123,115 @@ def get_distance(h_x, h_y):
     return D
 
 
-def analytic_distance(x, y):
-    
-    coefs = np.array([0.25, 0.25, 0.25, 0.25])
-    distances = []
-    
-    for h_x, h_y in zip(x, y):
-        D = get_distance(h_x, h_y)
-        distances.append(D)      
-        
-    distances = np.array(distances)
-    
-    return np.sum(distances * coefs)
-
-
 class AnalyticDistance:
-    
     def __init__(self, coefs):
         self.coefs = coefs
         
     def __call__(self, x, y): 
-        
         distances = []
-
         for h_x, h_y in zip(x, y):
             D = get_distance(h_x, h_y)
             distances.append(D)      
-
         distances = np.array(distances)
 
         return np.sum(distances * self.coefs)
 
 
-def get_pred_labels_analytic(df, dist):
-    
+def clusterize_analytic(df, dist, bar=False, return_score=False, trace=False):
+    '''data'''
+#     X = df.vectors.to_numpy()
     X = df.vectors.to_list()
+    y_true = df.type.to_list()
     n_clusters = df.type.unique().shape[0]
-
-    clusterer = KMeansClusterer(n_clusters, dist)
     
-    labels_pred = clusterer.cluster(X, True, trace=True)
-    labels_true = df.type.to_list()
-    rand_index = rand_score(labels_true, labels_pred)
-    print(f"rand_index: {rand_index}" + "\n")
+    '''clusterer'''
+    rng = random.Random()
+    rng.seed(SEED)
+    clusterer = KMeansClusterer(n_clusters, dist, rng=rng)
+    y_pred = clusterer.cluster(X, True, trace=trace)
+    df["cluster"] = y_pred
     
-    df["cluster"] = labels_pred
-    get_cluster_stat(df)
+    '''score'''
+    rand_index = rand_score(y_true, y_pred)
+
+    if bar:
+        get_cluster_stat(df)
+    if return_score:
+        return df, rand_index
+    print(f"Rand index: {rand_index}" + "\n")
+    return df
+
+
+def best_search_analytic(intervals, idx, dct, labels):
     
-    return df 
+    for i in idx:        
+        for interval in intervals:
+            train_df = form_dataset(dct, labels, _type='analytic', idx=i, _intervals=interval)
+            
+            size = len(i) 
+            coef = [1/size for i in range(size)]
+            
+            print(f"idx: {i} | histogram intervals: {interval} | coeffs: {coef}")
+            dist = AnalyticDistance(coef)
+            _ = clusterize_analytic(train_df, dist)
+        print()
 
 
 
-# def get_pred_labels_analytic_DBSCAN(df, dist):
+"""
+Distance metric learning
+"""
+def clusterize_dist_learn(df, learner, bar=False, return_score=False, trace=False):
+    '''data'''
+    X = df.vectors.to_list()
+    y_true = df.type.to_numpy()
+    n_clusters = df.type.unique().shape[0]
     
-#     X = df.vectors.to_list()
-#     n_clusters = df.type.unique().shape[0]
-
-#     clusterer = DBSCAN(metric=dist).fit(X)
+    _dct = {}
+    for i, _str in enumerate(np.unique(y_true)):
+        _dct[_str] = i
+    y_true = np.array([_dct[_str] for _str in y_true])
     
-#     labels_pred = clusterer.labels_
-#     labels_true = df.type.to_list()
-#     rand_index = rand_score(labels_true, labels_pred)
-#     print(f"rand_index: {rand_index}" + "\n")
+    '''distance'''
+    try:
+        dist_learn = learner(random_state=SEED)        
+    except:
+        dist_learn = learner() 
+    dist_learn.fit(X, y_true)
+    dist = dist_learn.get_metric()
     
-#     df["cluster"] = labels_pred
-#     get_cluster_stat(df)
+    '''clusterer'''
+    rng = random.Random()
+    rng.seed(SEED)
+    clusterer = KMeansClusterer(n_clusters, dist, rng=rng)
+    y_pred = clusterer.cluster(X, True, trace=trace)
+    df["cluster"] = y_pred
     
-#     return df 
+    '''score'''
+    rand_index = rand_score(y_true, y_pred)
 
-
-
-
-
+    if bar:
+        get_cluster_stat(df)
+    if return_score:
+        return df, rand_index
+    print(f"Rand index: {rand_index}" + "\n")
+    return df
+    
+        
+def best_search_dist_learn(intervals, dist_learners, dct, labels):
+    
+    for learner in dist_learners:
+        learner_name = str(learner).split('.')[-1][:-2]
+        
+        for interval in intervals:
+            print(f"learner: {learner_name} | histogram intervals: {interval}")
+            
+            train_df = form_dataset(dct, labels, _type='concatenate_all', _intervals=interval)
+            _ = clusterize_dist_learn(train_df, learner)
+        print()
+        
+            
+            
 """
 Visualize
 """
@@ -249,10 +273,5 @@ def show_clusters(df, mode="TSNE"):
     ax.grid(True)
     ax.legend()
     plt.show()
-
-    
-    
-
-
 
     
