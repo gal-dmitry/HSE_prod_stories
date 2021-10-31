@@ -13,10 +13,38 @@
 - [`./mapgen/mapgen/map.py`](./mapgen/mapgen/map.py) - карта
 
 
+### Training 
+
+Пример запуска:
+
+```
+python ppo_train.py \
+--seed 666 \
+--n_iter 500 \
+--env Dungeon \
+--agent_ckpt_dir ./tmp/ppo/dungeon \
+--train_gif_dir ./save/train/gifs \
+--ray_result_dir ./save/train/ray_results
+```
+
+
+### Evaluation 
+
+Пример запуска:
+
+```
+python ppo_no_grad.py \
+--seed 666 \
+--traj_count 5 \
+--env Dungeon \
+--load_path ./tmp/ppo/dungeon/checkpoint_000020/checkpoint-20 \
+--no_grad_gif_dir ./save/no_grad/gif
+```
+
 
 ### Environment
 
-#### Некоторые поля environment, важные для формирования награды
+#### Некоторые поля, важные для формирования награды
 
 - `self._max_steps` - максимально возможное кол-во шагов
 - `self.vision_radius` - радиус видимости
