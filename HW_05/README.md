@@ -1,3 +1,29 @@
 # HW_05
 
-Original repo: [g-e0s/rl_explore](https://github.com/g-e0s/rl_explore)
+
+### Original repo: [g-e0s/rl_explore](https://github.com/g-e0s/rl_explore)
+
+
+### Task
+
+Похожая задача: исследование многокомнатного помещения сенсором ограниченного обзора
+Симулятор: https://github.com/g-e0s/mapgen
+Набросок решения: https://github.com/g-e0s/rl_explore.git
+Наблюдения: 11x11 с агентом в центре, каналы - тип клетки + траектория:
+свободные клетки
+занятые клетки
+неизвестные клетки
+посещенные клетки
+Дествия: вперед, поворот налево, поворот направо
+Вознаграждение по умолчанию: % новых исследованных клеток
+Цель агента: исследовать всё помещение за минимальное число шагов
+
+
+### Requirements
+
+[requirements](requirements.txt)
+
+
+### Conda environment
+
+[mapgen_final](mapgen_final.yml)
