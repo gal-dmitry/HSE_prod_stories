@@ -1,16 +1,16 @@
 ### Files
 
-- [код тренировки](ppo_example.py)
-- [checkpoints](./tmp/ppo/dungeon)
-- [ray logging](./save/ray_results)
-- [gif-результаты](./save/gifs)
-- [tensorflow: логгирование тренировки](./tf_training)
-- [tensorflow: логгирование траектории](./tf_trajectory)
-- [агент](./mapgen/mapgen/agent.py)
-- [стандартное окружение](./mapgen/mapgen/env.py)
-- [новое окружение](./mapgen/mapgen/env_modified.py)
-- [генератор среды](./mapgen/mapgen/dungeon.py)
-- [карта](./mapgen/mapgen/map.py)
+- [`ppo_example.py`](ppo_example.py) - код тренировки
+- [`./tmp/ppo/dungeon`](./tmp/ppo/dungeon) - checkpoints
+- [`./save/ray_results`](./save/ray_results) - ray logging
+- [`./save/gifs`](./save/gifs) - gif-результаты
+- [`./tf_training`](./tf_training) - tensorflow: логгирование тренировки
+- [`./tf_trajectory`](./tf_trajectory) - tensorflow: логгирование траектории
+- [`./mapgen/mapgen/agent.py`](./mapgen/mapgen/agent.py) - агент
+- [`./mapgen/mapgen/env.py`](./mapgen/mapgen/env.py) - стандартное окружение
+- [`./mapgen/mapgen/env_modified.py`](./mapgen/mapgen/env_modified.py) - новое окружение
+- [`./mapgen/mapgen/dungeon.py`](./mapgen/mapgen/dungeon.py) - генератор среды
+- [`./mapgen/mapgen/map.py`](./mapgen/mapgen/map.py) - карта
 
 
 
