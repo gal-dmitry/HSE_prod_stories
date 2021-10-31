@@ -40,11 +40,11 @@ python ppo_no_grad.py \
 ### Environment
 
 
-#### files
+#### Files
 
 - [`./mapgen/mapgen/agent.py`](./mapgen/mapgen/agent.py) - агент
 - [`./mapgen/mapgen/env.py`](./mapgen/mapgen/env.py) - стандартное окружение
-- [`./mapgen/mapgen/env_modified.py`](./mapgen/mapgen/env_modified.py) - новое окружение
+- [`./mapgen/mapgen/env_modified.py`](./mapgen/mapgen/env_modified.py) - новое окружение: **ModifiedDungeon**
 - [`./mapgen/mapgen/dungeon.py`](./mapgen/mapgen/dungeon.py) - генератор среды
 - [`./mapgen/mapgen/map.py`](./mapgen/mapgen/map.py) - карта
 

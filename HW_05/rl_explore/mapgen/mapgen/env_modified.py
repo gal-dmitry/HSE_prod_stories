@@ -22,11 +22,25 @@ class ModifiedDungeon(Dungeon):
             vision_radius = 5,
             max_steps = max_steps
         )
-
-        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 3]) # because we remove trajectory and leave only cell types (UNK, FREE, OCCUPIED)
+        
+        # because we remove trajectory and leave only cell types (UNK, FREE, OCCUPIED)
+        self.observation_space = spaces.Box(0, 1, [observation_size, observation_size, 4])
         self.action_space = spaces.Discrete(3)
 
+        
     def step(self):
         observation, reward , done, info = super().step()
-        observation = observation[:, :, :-1] # remove trajectory
+        
+        
+        info["moved"]
+        
+        
         return observation, reward , done, info
+    
+    
+    
+    
+    
+    
+    
+    
