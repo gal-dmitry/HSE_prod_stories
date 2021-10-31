@@ -1,19 +1,11 @@
-### Files
+### Training 
 
-- [`ppo_example.py`](ppo_example.py) - код тренировки
+- [`ppo_train.py`](ppo_train.py) - код тренировки
 - [`./tmp/ppo/dungeon`](./tmp/ppo/dungeon) - checkpoints
-- [`./save/ray_results`](./save/ray_results) - ray logging
-- [`./save/gifs`](./save/gifs) - gif-результаты
+- [`./save/train/ray_results`](./save/train/ray_results) - ray logging
+- [`./save/train/gifs`](./save/train/gifs) - gif-результаты
 - [`./tf_training`](./tf_training) - tensorflow: логгирование тренировки
 - [`./tf_trajectory`](./tf_trajectory) - tensorflow: логгирование траектории
-- [`./mapgen/mapgen/agent.py`](./mapgen/mapgen/agent.py) - агент
-- [`./mapgen/mapgen/env.py`](./mapgen/mapgen/env.py) - стандартное окружение
-- [`./mapgen/mapgen/env_modified.py`](./mapgen/mapgen/env_modified.py) - новое окружение
-- [`./mapgen/mapgen/dungeon.py`](./mapgen/mapgen/dungeon.py) - генератор среды
-- [`./mapgen/mapgen/map.py`](./mapgen/mapgen/map.py) - карта
-
-
-### Training 
 
 Пример запуска:
 
@@ -30,6 +22,9 @@ python ppo_train.py \
 
 ### Evaluation 
 
+- [`ppo_no_grad.py`](ppo_no_grad.py) - код evaluation
+- [`./save/no_grad/gifs`](./save/no_grad/gifs) - gif-результаты 
+
 Пример запуска:
 
 ```
@@ -43,6 +38,16 @@ python ppo_no_grad.py \
 
 
 ### Environment
+
+
+#### files
+
+- [`./mapgen/mapgen/agent.py`](./mapgen/mapgen/agent.py) - агент
+- [`./mapgen/mapgen/env.py`](./mapgen/mapgen/env.py) - стандартное окружение
+- [`./mapgen/mapgen/env_modified.py`](./mapgen/mapgen/env_modified.py) - новое окружение
+- [`./mapgen/mapgen/dungeon.py`](./mapgen/mapgen/dungeon.py) - генератор среды
+- [`./mapgen/mapgen/map.py`](./mapgen/mapgen/map.py) - карта
+
 
 #### Некоторые поля, важные для формирования награды
 

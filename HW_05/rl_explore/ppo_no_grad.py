@@ -21,7 +21,7 @@ def define_args():
     parser.add_argument("--traj_count", type=int, default=5)
     parser.add_argument('--env', type=str, default="Dungeon")
     parser.add_argument("--load_path", type=str, default="./tmp/ppo/dungeon/checkpoint_000005-checkpoint-5")
-    parser.add_argument("--no_grad_gif_dir", type=str, default="./save/no_grad/gif")
+    parser.add_argument("--no_grad_gif_dir", type=str, default="./save/no_grad/gifs")
     args = parser.parse_args()    
     
     timestamp = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M')
@@ -45,14 +45,14 @@ def dir_check(args):
 
 def eval(agent, args):
     env = args.env(20, 20, 3, min_room_xy=5, max_room_xy=10, vision_radius=5)
-    obs = env.reset()
-    max_steps = env._max_steps
     
     for n in range(args.traj_count):
         print(f"trajectory No {n+1}")
+        obs = env.reset()
         frames = []
-
-        for _ in range(max_steps):
+        
+        # make gif
+        for _ in range(500):
             action = agent.compute_single_action(obs)
             frame = \
             Image.fromarray(env._map.render(env._agent)).convert('RGB').resize((500, 500), Image.NEAREST).quantize()
@@ -64,7 +64,6 @@ def eval(agent, args):
 
         out_path = join(args.no_grad_gif_dir, f"traj_{str.zfill(str(n+1), 3)}.gif")
         frames[0].save(out_path, save_all=True, append_images=frames[1:], loop=0, duration=1000/60)
-        obs = env.reset()
 
     print("Done!")
 

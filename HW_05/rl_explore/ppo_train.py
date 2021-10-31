@@ -110,6 +110,7 @@ def train(agent, writer_training, timestamp, args):
             frames = []
             writer_trajectory = SummaryWriter(log_dir=f"tf_trajectory/{timestamp}/{str.zfill(str(n+1), 3)}")
             
+            # make gif
             for _ in range(500):
                 action = agent.compute_single_action(obs)
 
