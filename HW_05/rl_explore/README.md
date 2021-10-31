@@ -6,11 +6,9 @@
 - [gif-результаты](./save/gifs)
 - [tensorflow: логгирование тренировки](./tf_training)
 - [tensorflow: логгирование траектории](./tf_trajectory)
-
 - [агент](./mapgen/mapgen/agent.py)
 - [стандартное окружение](./mapgen/mapgen/env.py)
 - [новое окружение](./mapgen/mapgen/env_modified.py)
-
 - [генератор среды](./mapgen/mapgen/dungeon.py)
 - [карта](./mapgen/mapgen/map.py)
 
