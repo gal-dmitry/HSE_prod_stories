@@ -11,6 +11,7 @@
 ### Experiments
 
 - [Experiments.ipynb](./Experiments.ipynb) - описание экспериментов
+- [modified/gifs](./save/train/modified/gifs) - gif 2-ого эксперимента
 
 
 #### Experiment 1:
