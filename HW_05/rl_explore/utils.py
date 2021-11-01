@@ -1,17 +1,21 @@
 import numpy as np
 import random
 import torch
-    
+from torch.utils.data import Dataset, DataLoader
+import os
+import matplotlib.pyplot as plt
 
-def update_writer_training(writer, result, n):
+
+def update_writer_training(writer, result, n, _print=False):
     
-#         print(result.keys())
-#         for key, value in result.items():
-#             print()
-#             print()
-#             print(key)
-#             print()
-#             print(value)
+    if _print:
+        print(result.keys())
+        for key, value in result.items():
+            print()
+            print()
+            print(key)
+            print()
+            print(value)
     
     n +=1        
          
@@ -65,4 +69,52 @@ def seed_everything(seed, env=None):
     random.seed(seed)
     torch.manual_seed(seed)
     
+
     
+    
+    
+    
+"""
+IMG
+"""
+class Pictures(Dataset):
+    """
+    Dataset with pictures
+    """
+    def __init__(self, path_to_dataset):
+        self.names = os.listdir(path_to_dataset)
+        self.names.sort()
+        if '.ipynb_checkpoints' in self.names:
+            self.names.remove('.ipynb_checkpoints')
+        self.path = path_to_dataset
+    
+    def __getitem__(self, index):
+        full_path = self.path + "/" + self.names[index]
+        if not os.path.exists(full_path):
+            return None
+        img = plt.imread(full_path)
+        return np.array(img)
+
+    def __len__(self):
+        return len(self.names)
+
+    
+    
+def show_pictures(path):
+    
+    dataset = Pictures(path)
+    size = len(dataset)
+    indx = range(size)
+    imgs = [dataset[i] for i in indx]
+    
+    fig = plt.figure(figsize=(1.5*size, 3*size))
+    columns = 1
+    rows = size
+    ax = []
+    
+    for num, img in enumerate(imgs):                 
+        ax.append(fig.add_subplot(rows, columns, num+1))
+        plt.imshow(img)
+        plt.axis('off') 
+
+    plt.tight_layout()

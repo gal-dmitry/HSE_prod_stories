@@ -7,7 +7,13 @@
 - [`./tf_training`](./tf_training) - tensorflow: логгирование тренировки
 - [`./tf_trajectory`](./tf_trajectory) - tensorflow: логгирование траектории
 
-Пример запуска:
+
+### Experiments
+
+- [Experiments.ipynb](./Experiments.ipynb) - описание экспериментов
+
+
+#### Experiment 1:
 
 ```
 python ppo_train.py \
@@ -17,6 +23,18 @@ python ppo_train.py \
 --agent_ckpt_dir ./tmp/ppo/dungeon \
 --train_gif_dir ./save/train/gifs \
 --ray_result_dir ./save/train/ray_results
+```
+
+#### Experiment 2:
+
+```
+python ppo_train.py \
+--seed 666 \
+--n_iter 500 \
+--env ModifiedDungeon \
+--agent_ckpt_dir ./tmp/ppo/modified_dungeon \
+--train_gif_dir ./save/train/modified/gifs \
+--ray_result_dir ./save/train/modified/ray_results
 ```
 
 
