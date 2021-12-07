@@ -83,7 +83,7 @@ class PMI(object):
                  threshold=0.2,
                  window_half_size=2,
                  min_df=5,
-                 max_df=1200,
+                 max_df=1_200,
                  alpha=0.75):
         
         self.th, self.whs = threshold, window_half_size
@@ -197,7 +197,7 @@ class Lda:
     def __init__(self, text, num_topics=10):
         dictionary, corpus = get_dict_corp(text)
 
-        self.tf_idf = TfidfModel(corpus, id2word=dictionary)
+        self.tf_idf = TfidfModel(corpus, id2word=dictionary, normalize=True)
         self.corpus = self.tf_idf[corpus]
         self.model = LdaModel(self.corpus, num_topics, id2word=dictionary, random_state=SEED)
         
@@ -276,7 +276,7 @@ def topic_words_table(model, k=10, topics=None):
     top = topics if topics is not None else range(model.num_topics)
     for t in top:
         topic_top_k_words = model.topic2words(t, k)
-        df[f"topic: {t}"] = topic_top_k_words
+        df[f"topic: {t + 1}"] = topic_top_k_words # + 1: in order to be consistent to pyLDAvis
     return df  
 
     
@@ -290,7 +290,7 @@ def visualize_topics(lda_model, text=None):
     else:
         crp = lda_model.corpus
 
-    return pyLDAvis.gensim_models.prepare(mdl, crp, dct, mds="mmds")        
+    return pyLDAvis.gensim_models.prepare(mdl, crp, dct, mds="mmds", sort_topics=False)        
 
 
 
